@@ -6,8 +6,7 @@
 
 **译者的话：**
 
-很喜欢这本书，但是没有中文版。便有了翻译这本书的想法，时间，水平有限，
-任何疏漏，欢迎大家 pull request : )
+很喜欢这本书，但是没有中文版。便有了翻译这本书的想法，时间，水平有限，任何疏漏，欢迎大家 pull request : )
 
 你可以在[这里](https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms)免费下载到这本书的PDF。
 
@@ -209,9 +208,9 @@ int main(){
 
 ##### 8.0.3 动机
 
-有时，在派生类对象还在构造的期间，我们想调用虚函数。语言的规则明确禁止，因为在派生类被完全初始化之前调用其成
+有时，在派生类对象还在构造的期间，我们想调虚函数。语言的规则明确禁止，因为在派生类被完全初始化之前调用其成
 
-员函数是危险的。如果虚函数不去访问派生类对象还没有构造好的成员，是安全的，但没有一般的方法来保证这一点。
+员函数是非常危险的。如果虚函数不去访问派生类对象还没有构造好的成员，是安全的，但没有通用的方法来保证这一点。
 
 ~~~
 class Base{
@@ -240,13 +239,11 @@ class Derived: public Base{
 
 ##### 8.0.4 解决方案和示例代码
 
-有许多种方法实现构造函数中动态绑定的效果。每种方法都有优点和局限。
+有许多种方法实现构造函数中动态绑定的效果。每种方法都有优点和局限。这些方法大体上可以分为两类，一类使用两阶
 
-这些方法大体上可以分为两类，一类使用两阶段构造，另一类是一阶段构造。
+段构造，另一类是一阶段构造。两阶段构造把对象初始化和构造的状态分开了。这样的分离并不总是可行的。对象状态的
 
-两阶段构造把对象初始化和构造的状态分开了。这样的分离并不总是可行的。
-
-对象状态的初始化被放进了一个独立的函数，既可以是成员函数也可以是普通函数。
+初始化被放进了一个独立的函数，既可以是成员函数也可以是普通函数。
 
 ~~~
 class Base{
@@ -283,7 +280,7 @@ std::auto_ptr<Base> factory(Parameter p){
     return ptr;
 }
 
-//非成员函数，非模板的实现如下,工厂函数可以可以放进基类，但必须是静态的。
+//成员函数，非模板的版本的实现如下,工厂函数可以可以放进基类，但必须是静态的。
 
 class Base{
 
@@ -304,10 +301,44 @@ int main(){
 
 ~~~
 
+派生类的构造函数应该声明为私有的，以防止用户不小心使用了他们。接口应当容易被正确的使用,还记得吗？工厂函数应
+
+该作为派生类的友元函数，除了成员工厂函数，基类可以成为派生类的友元。
+
 * 不使用两阶段构造
+
+怪异的循环模版模式在这种情形下是有用的。
 
 ~~~
 
+class Base{
+
+};
+
+template <class D>
+class InitTimeCaller : public Base{
+
+protected:
+    InitTimeCaller(){
+        D::foo();
+        D::bar();
+    }
+};
+
+class Derived : public InitTimeCaller <Derived>{
+
+public:
+    Derived() : InitTimeCaller<Derived>(){
+
+        cout<<"Derived::Derived()\n";
+    }
+    static void foo(){
+        cout<<"Derived::foo()\n";
+    }
+    static void bar(){
+        cout<<"Derived::bar()\n";
+    }
+};
 ~~~
 
 ##### 8.0.5 已知的用处
@@ -329,6 +360,106 @@ int main(){
 ##### 5.0.5 已知的用处
 
 ##### 5.0.6 相关的做法
+
+---
+
+#### **62 安全布尔**
+
+##### 62.0.1 目的
+
+为了对类提供布尔转换，防止表达式中出现不想要的隐式的布尔类型转换. 
+
+##### 62.0.1 别名 
+
+##### 62.0.3 动机
+
+提供布尔转换函数会比好处带来更多的坏处，因为类型转换会在表达式中隐式发生，通常你不希望这样。如果定义了简单
+
+的转换操作符使两种或更多种的对象可以相互比较，类型是安全的，比如：
+
+~~~
+sturct Testable{
+
+    operator bool() const{
+
+        return false;
+    }
+};
+
+struct AnotherTestable{
+
+    operator bool() const{
+
+        return true;
+    }
+};
+
+int main(){
+
+    Testable a;
+    AnotherTestable b;
+    if(a == b){
+    ...
+    }           // 这里的比较完全不是有意的，但是编译器开心地编译了它们。
+    if(a<0){
+    ...
+    }
+    return 0;
+}
+~~~
+
+##### 62.0.4 解决方案和示例代码
+
+~~~
+class Testable{
+    bool ok_;
+    typedef void (Testable::*bool_type)() const;
+    void this_type_does_not_support_comparisons() const;
+public:
+    explicit Testable(bool b=true) : ok_(b){}
+
+    operator bool_type() const{
+
+        return ok_? &Testable::this_type_does_not_support_comparisons : 0;
+    }
+};
+
+template <typename T>
+bool operator !=(const Testable& lhs,const T&){
+    lhs.this_type_does_not_support_comparisons();
+    return false;
+}
+template <typename T>
+bool operator ==(const Teatable& lhs,const T&){
+    lhs.this_type_does_not_support_comparisons();
+    return false;
+}
+
+class AnotherTestable...
+{};
+
+int main(void){
+    
+    Testable t1;
+    AnotherTestable t2;
+    if(t1){
+    // 可以正常工作
+    }
+    if(t2 == t1){
+    // 编译失败
+    }
+    if(t1<0){
+    // 编译失败
+    }
+
+    return 0;
+}
+
+~~~
+
+##### 62.0.5 已知的用处
+
+##### 62.0.6 相关的做法
 
 ---
 

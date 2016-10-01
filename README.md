@@ -38,9 +38,9 @@ C++允许重载取地址运算符，却没有规定取地址运算符的返回�
 
 非常奇怪的，但语言自身无疑允许这样做。取址器手法是不依赖取地址运算符获得对象实际地址的一种方法。
 
-在下面的例子中，由于取地址运算符是类私有的，main 函数会编译失败。即使没有私有的访问控制，返回类型double也不能
+在下面的例子中，由于取地址运算符是类私有的，main 函数会编译失败。即使没有私有的访问控制，返回类型double转成指
 
-够自动转成指针。
+针也是无意义的。
 
 ~~~
 class nonaddressable{
@@ -52,8 +52,8 @@ private:
 
 int main(){
 
-    noaddressable na;
-    noaddressable * naptr = &na;    // Compiler error here.
+    nonaddressable na;
+    nonaddressable * naptr = &na;    // Compiler error here.
 }
 ~~~
 
@@ -71,8 +71,8 @@ T * addressof(T& v){
 
 int main(){
 
-    noaddressable na;
-    noaddressable * naptr = &na;
+    nonaddressable na;
+    nonaddressable * naptr = &na;
 }
 ~~~
 
@@ -80,7 +80,7 @@ int main(){
 
 * Boost 中的 addressof 
 
-在C++11的 <memory> 头文件中已经定义了这个函数。
+在C++11的 <memory> 中已经包含了这个函数。
 
 ##### 1.0.6 相关的做法
 
@@ -92,7 +92,7 @@ int main(){
 
 ##### 2.0.1 目的
 
-为了隐藏单个范型抽象
+给关系密切的具体类(如实数和复数)提供一致的接口。
 
 ##### 2.0.1 别名
 
@@ -100,13 +100,13 @@ int main(){
 
 ##### 2.0.3 动机
 
-在纯的像 Smalltalk 面向对象语言中，变量像标签那样在运行时绑定到对象。变量名绑定对象就像是给对象贴上标签.这些
+在像Smalltalk这样纯粹的面向对象语言中，变量像标签那样在运行时动态绑定到对象。变量名绑定对象就像是给对象贴
 
-语言中的赋值就像是从一个对象上把标签扯下来贴到另一个对象上。然而，在 C 和 C++ 中，变量不是对象的标签而是实际
+上标签.这些语言中的赋值好比是从一个对象身上把标签斯下来贴到另外的对象身上。然而，在C和C++中，变量不像对象
 
-的地址或者偏移。赋值不是重新变量名重新绑定对象，赋值意味着用旧值覆盖新值。代数抽象基类是在C++中利用委托和多态
+的标签而是实际的地址和偏移。赋值不是名字重新绑定到对象，赋值意味着用旧值覆盖新值。代数抽象基类使用委托和多
 
-来模拟变量跟对象的绑定。代数抽象基类在实现中使用了“信封手法”，代数抽象基类的目的，就可以够写出如下的代码:
+态来模拟变量名字跟对象的绑定。代数抽象基类使用了“信封手法”。这里抽象基类的动机，是能够写如下的代码:
 
 ~~~
 Number n1 = Complex (1,2);  // n1是一个复数
@@ -120,41 +120,290 @@ Number n2 = n3;     // "重新贴标签"
 代数抽象基类的实现代码如下。
 
 ~~~
-template <class T>
-T * addressof(T& v){
-
-    return reinterpret_cast<T*>(& const_cast<char&>(reinterpret_cast<const volatile char&>(v)));
+#include <iostream>
+ 
+using namespace std;
+ 
+struct BaseConstructor { BaseConstructor(int=0) {} };
+ 
+class RealNumber;
+class Complex;
+class Number;
+ 
+class Number
+{
+    friend class RealNumber;
+    friend class Complex;
+ 
+  public:
+    Number ();
+    Number & operator = (const Number &n);
+    Number (const Number &n);
+    virtual ~Number();
+ 
+    virtual Number operator + (Number const &n) const;
+    void swap (Number &n) throw ();
+ 
+    static Number makeReal (double r);
+    static Number makeComplex (double rpart, double ipart);
+ 
+  protected:
+    Number (BaseConstructor);
+ 
+  private:
+    void redefine (Number *n);
+    virtual Number complexAdd (Number const &n) const;
+    virtual Number realAdd (Number const &n) const;
+ 
+    Number *rep;
+    short referenceCount;
+};
+ 
+class Complex : public Number
+{
+  friend class RealNumber;
+  friend class Number;
+ 
+  Complex (double d, double e);
+  Complex (const Complex &c);
+  virtual ~Complex ();
+ 
+  virtual Number operator + (Number const &n) const;
+  virtual Number realAdd (Number const &n) const;
+  virtual Number complexAdd (Number const &n) const;
+ 
+  double rpart, ipart;
+};
+ 
+class RealNumber : public Number
+{
+  friend class Complex;
+  friend class Number;
+ 
+  RealNumber (double r);
+  RealNumber (const RealNumber &r);
+  virtual ~RealNumber ();
+ 
+  virtual Number operator + (Number const &n) const;
+  virtual Number realAdd (Number const &n) const;
+  virtual Number complexAdd (Number const &n) const;
+ 
+  double val;
+};
+ 
+/// Used only by the letters.
+Number::Number (BaseConstructor)
+: rep (0),
+  referenceCount (1)
+{}
+ 
+/// Used by user and static factory functions.
+Number::Number () 
+  : rep (0),
+    referenceCount (0)
+{}
+ 
+/// Used by user and static factory functions.
+Number::Number (const Number &n)
+: rep (n.rep),
+  referenceCount (0)
+{
+  cout << "Constructing a Number using Number::Number\n";
+  if (n.rep)
+    n.rep->referenceCount++;
 }
-
-int main(){
-
-    noaddressable na;
-    noaddressable * naptr = &na;
+ 
+Number Number::makeReal (double r)
+{
+  Number n;
+  n.redefine (new RealNumber (r));
+  return n;
+}
+ 
+Number Number::makeComplex (double rpart, double ipart)
+{
+  Number n;
+  n.redefine (new Complex (rpart, ipart));
+  return n;
+}
+ 
+Number::~Number()
+{
+  if (rep && --rep->referenceCount == 0)
+    delete rep;
+}
+ 
+Number & Number::operator = (const Number &n)
+{
+  cout << "Assigning a Number using Number::operator=\n";
+  Number temp (n);
+  this->swap (temp);
+  return *this;
+}
+ 
+void Number::swap (Number &n) throw ()
+{
+  std::swap (this->rep, n.rep);
+}
+ 
+Number Number::operator + (Number const &n) const
+{
+  return rep->operator + (n);
+}
+ 
+Number Number::complexAdd (Number const &n) const 
+{
+  return rep->complexAdd (n);
+}
+ 
+Number Number::realAdd (Number const &n) const
+{
+  return rep->realAdd (n);
+}
+ 
+void Number::redefine (Number *n)
+{
+  if (rep && --rep->referenceCount == 0)
+    delete rep;
+  rep = n;
+}
+ 
+Complex::Complex (double d, double e)
+  : Number (BaseConstructor()),
+    rpart (d),
+    ipart (e)
+{
+  cout << "Constructing a Complex\n";
+}
+ 
+Complex::Complex (const Complex &c)
+  : Number (BaseConstructor()),
+    rpart (c.rpart),
+    ipart (c.ipart)
+{
+  cout << "Constructing a Complex using Complex::Complex\n";
+}
+ 
+Complex::~Complex()
+{
+  cout << "Inside Complex::~Complex()\n";
+}
+ 
+Number Complex::operator + (Number const &n) const
+{ 
+  return n.complexAdd (*this); 
+}
+ 
+Number Complex::realAdd (Number const &n) const
+{
+  cout << "Complex::realAdd\n";
+  RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
+  return Number::makeComplex (this->rpart + rn->val, 
+                              this->ipart);
+}
+ 
+Number Complex::complexAdd (Number const &n) const
+{
+  cout << "Complex::complexAdd\n";
+  Complex const *cn = dynamic_cast <Complex const *> (&n);
+  return Number::makeComplex (this->rpart + cn->rpart, 
+                              this->ipart + cn->ipart);
+}
+ 
+RealNumber::RealNumber (double r)
+  : Number (BaseConstructor()),
+    val (r)
+{
+  cout << "Constructing a RealNumber\n";
+}
+ 
+RealNumber::RealNumber (const RealNumber &r)
+  : Number (BaseConstructor()),
+    val (r.val)
+{
+  cout << "Constructing a RealNumber using RealNumber::RealNumber\n";
+}
+ 
+RealNumber::~RealNumber()
+{
+  cout << "Inside RealNumber::~RealNumber()\n";
+}
+ 
+Number RealNumber::operator + (Number const &n) const
+{ 
+  return n.realAdd (*this); 
+}
+ 
+Number RealNumber::realAdd (Number const &n) const
+{
+  cout << "RealNumber::realAdd\n";
+  RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
+  return Number::makeReal (this->val + rn->val);
+}
+ 
+Number RealNumber::complexAdd (Number const &n) const
+{
+  cout << "RealNumber::complexAdd\n";
+  Complex const *cn = dynamic_cast <Complex const *> (&n);
+  return Number::makeComplex (this->val + cn->rpart, cn->ipart);
+}
+namespace std
+{
+template <>
+void swap (Number & n1, Number & n2)
+{
+  n1.swap (n2);
+}
+}
+int main (void)
+{
+  Number n1 = Number::makeComplex (1, 2);
+  Number n2 = Number::makeReal (10);
+  Number n3 = n1 + n2;
+  cout << "Finished\n";
+ 
+  return 0;
 }
 ~~~
 
 ##### 2.0.5 已知的用处
 
-##### 2.0.6 相关的做法
+##### 2.0.6 相关的手法
 
-* 
+* 桥接模式
 
 * 信封手法
 
 ##### 2.0.7 引用
 
 ---
-#### **3 取址器**
+#### **3 初始化附着**
 
 ##### 3.0.1 目的
 
+在程序开始执行之前，产生用户定义的对象，以在框架中使用。
+
 ##### 3.0.1 别名
 
+有构造函数的静态对象
+
 ##### 3.0.3 动机
+
+一些应用程序框架，比如图形用户界面框架（如MFC），和一些对象请求代理（如一些对象请求代理体系结构的实现）使用
+
+他们自己的消息循环（也叫做事件循环）控制整个应用程序。程序员可能不能写应用程序级别的main函数。当然，main函数
+
+被深埋在框架里边（如MFC中的AfxWinMain)，缺乏对main函数的控制使得程序员很难编写在应用程序主消息循环开始之前的
+
+初始化代码。初始化附着手法是在框架控制事件循环开始之前执行应用相关代码的方法。
 
 ##### 3.0.4 解决方案和示例代码
 
 在C++中，全局作用域中的全局和静态对象在main函数开始执行之前初始化。换句话说这些对象具有静态存储周期。
+
+~~~
+
+~~~
 
 ##### 3.0.5 已知的用处
 

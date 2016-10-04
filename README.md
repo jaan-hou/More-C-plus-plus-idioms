@@ -161,208 +161,190 @@ class Number
  
 class Complex : public Number
 {
-  friend class RealNumber;
-  friend class Number;
- 
-  Complex (double d, double e);
-  Complex (const Complex &c);
-  virtual ~Complex ();
- 
-  virtual Number operator + (Number const &n) const;
-  virtual Number realAdd (Number const &n) const;
-  virtual Number complexAdd (Number const &n) const;
- 
-  double rpart, ipart;
+    friend class RealNumber;
+    friend class Number;
+
+    Complex (double d, double e);
+    Complex (const Complex &c);
+    virtual ~Complex ();
+
+    virtual Number operator + (Number const &n) const;
+    virtual Number realAdd (Number const &n) const;
+    virtual Number complexAdd (Number const &n) const;
+
+    double rpart, ipart;
 };
  
 class RealNumber : public Number
 {
-  friend class Complex;
-  friend class Number;
- 
-  RealNumber (double r);
-  RealNumber (const RealNumber &r);
-  virtual ~RealNumber ();
- 
-  virtual Number operator + (Number const &n) const;
-  virtual Number realAdd (Number const &n) const;
-  virtual Number complexAdd (Number const &n) const;
- 
-  double val;
+    friend class Complex;
+    friend class Number;
+
+    RealNumber (double r);
+    RealNumber (const RealNumber &r);
+    virtual ~RealNumber ();
+
+    virtual Number operator + (Number const &n) const;
+    virtual Number realAdd (Number const &n) const;
+    virtual Number complexAdd (Number const &n) const;
+
+    double val;
 };
  
 /// Used only by the letters.
-Number::Number (BaseConstructor)
-: rep (0),
-  referenceCount (1)
-{}
+Number::Number (BaseConstructor) : rep (0), referenceCount (1) {}
  
 /// Used by user and static factory functions.
-Number::Number () 
-  : rep (0),
-    referenceCount (0)
-{}
+Number::Number () : rep (0), referenceCount (0) {}
  
 /// Used by user and static factory functions.
-Number::Number (const Number &n)
-: rep (n.rep),
-  referenceCount (0)
+Number::Number (const Number &n) : rep (n.rep), referenceCount (0)
 {
-  cout << "Constructing a Number using Number::Number\n";
-  if (n.rep)
-    n.rep->referenceCount++;
+    cout << "Constructing a Number using Number::Number\n";
+    if (n.rep)
+        n.rep->referenceCount++;
 }
  
 Number Number::makeReal (double r)
 {
-  Number n;
-  n.redefine (new RealNumber (r));
-  return n;
+    Number n;
+    n.redefine (new RealNumber (r));
+    return n;
 }
  
 Number Number::makeComplex (double rpart, double ipart)
 {
-  Number n;
-  n.redefine (new Complex (rpart, ipart));
-  return n;
+    Number n;
+    n.redefine (new Complex (rpart, ipart));
+    return n;
 }
  
 Number::~Number()
 {
-  if (rep && --rep->referenceCount == 0)
-    delete rep;
+    if (rep && --rep->referenceCount == 0)
+        delete rep;
 }
  
 Number & Number::operator = (const Number &n)
 {
-  cout << "Assigning a Number using Number::operator=\n";
-  Number temp (n);
-  this->swap (temp);
-  return *this;
+    cout << "Assigning a Number using Number::operator=\n";
+    Number temp (n);
+    this->swap (temp);
+    return *this;
 }
  
 void Number::swap (Number &n) throw ()
 {
-  std::swap (this->rep, n.rep);
+    std::swap (this->rep, n.rep);
 }
  
 Number Number::operator + (Number const &n) const
 {
-  return rep->operator + (n);
+    return rep->operator + (n);
 }
  
 Number Number::complexAdd (Number const &n) const 
 {
-  return rep->complexAdd (n);
+    return rep->complexAdd (n);
 }
  
 Number Number::realAdd (Number const &n) const
 {
-  return rep->realAdd (n);
+    return rep->realAdd (n);
 }
  
 void Number::redefine (Number *n)
 {
-  if (rep && --rep->referenceCount == 0)
-    delete rep;
-  rep = n;
+    if (rep && --rep->referenceCount == 0)
+        delete rep;
+    rep = n;
 }
  
-Complex::Complex (double d, double e)
-  : Number (BaseConstructor()),
-    rpart (d),
-    ipart (e)
+Complex::Complex (double d, double e) : Number (BaseConstructor()), rpart (d), ipart (e)
 {
-  cout << "Constructing a Complex\n";
+    cout << "Constructing a Complex\n";
 }
  
-Complex::Complex (const Complex &c)
-  : Number (BaseConstructor()),
-    rpart (c.rpart),
-    ipart (c.ipart)
+Complex::Complex (const Complex &c) : Number (BaseConstructor()), rpart (c.rpart), ipart (c.ipart)
 {
-  cout << "Constructing a Complex using Complex::Complex\n";
+    cout << "Constructing a Complex using Complex::Complex\n";
 }
  
 Complex::~Complex()
 {
-  cout << "Inside Complex::~Complex()\n";
+    cout << "Inside Complex::~Complex()\n";
 }
  
 Number Complex::operator + (Number const &n) const
 { 
-  return n.complexAdd (*this); 
+    return n.complexAdd (*this); 
 }
  
 Number Complex::realAdd (Number const &n) const
 {
-  cout << "Complex::realAdd\n";
-  RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
-  return Number::makeComplex (this->rpart + rn->val, 
-                              this->ipart);
+      cout << "Complex::realAdd\n";
+      RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
+      return Number::makeComplex (this->rpart + rn->val, this->ipart);
 }
  
 Number Complex::complexAdd (Number const &n) const
 {
-  cout << "Complex::complexAdd\n";
-  Complex const *cn = dynamic_cast <Complex const *> (&n);
-  return Number::makeComplex (this->rpart + cn->rpart, 
-                              this->ipart + cn->ipart);
+    cout << "Complex::complexAdd\n";
+    Complex const *cn = dynamic_cast <Complex const *> (&n);
+    return Number::makeComplex (this->rpart + cn->rpart, this->ipart + cn->ipart);
 }
  
-RealNumber::RealNumber (double r)
-  : Number (BaseConstructor()),
-    val (r)
+RealNumber::RealNumber (double r) : Number (BaseConstructor()), val (r)
 {
-  cout << "Constructing a RealNumber\n";
+    cout << "Constructing a RealNumber\n";
 }
  
 RealNumber::RealNumber (const RealNumber &r)
   : Number (BaseConstructor()),
     val (r.val)
 {
-  cout << "Constructing a RealNumber using RealNumber::RealNumber\n";
+    cout << "Constructing a RealNumber using RealNumber::RealNumber\n";
 }
  
 RealNumber::~RealNumber()
 {
-  cout << "Inside RealNumber::~RealNumber()\n";
+    cout << "Inside RealNumber::~RealNumber()\n";
 }
  
 Number RealNumber::operator + (Number const &n) const
 { 
-  return n.realAdd (*this); 
+    return n.realAdd (*this); 
 }
  
 Number RealNumber::realAdd (Number const &n) const
 {
-  cout << "RealNumber::realAdd\n";
-  RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
-  return Number::makeReal (this->val + rn->val);
+    cout << "RealNumber::realAdd\n";
+    RealNumber const *rn = dynamic_cast <RealNumber const *> (&n);
+    return Number::makeReal (this->val + rn->val);
 }
  
 Number RealNumber::complexAdd (Number const &n) const
 {
-  cout << "RealNumber::complexAdd\n";
-  Complex const *cn = dynamic_cast <Complex const *> (&n);
-  return Number::makeComplex (this->val + cn->rpart, cn->ipart);
+    cout << "RealNumber::complexAdd\n";
+    Complex const *cn = dynamic_cast <Complex const *> (&n);
+    return Number::makeComplex (this->val + cn->rpart, cn->ipart);
 }
 namespace std
 {
-template <>
-void swap (Number & n1, Number & n2)
-{
-  n1.swap (n2);
-}
+    template <>
+    void swap (Number & n1, Number & n2)
+    {
+        n1.swap (n2);
+    }
 }
 int main (void)
 {
-  Number n1 = Number::makeComplex (1, 2);
-  Number n2 = Number::makeReal (10);
-  Number n3 = n1 + n2;
-  cout << "Finished\n";
- 
-  return 0;
+    Number n1 = Number::makeComplex (1, 2);
+    Number n2 = Number::makeReal (10);
+    Number n3 = n1 + n2;
+    cout << "Finished\n";
+
+    return 0;
 }
 ~~~
 
@@ -389,17 +371,21 @@ int main (void)
 
 ##### 3.0.3 动机
 
-一些应用程序框架，比如图形用户界面框架（如MFC），和一些对象请求代理（如一些对象请求代理体系结构的实现）使用
+一些应用程序框架，比如图形用户界面框架（如MFC），和一些代理对象（如一些代理对象结构的实现）使用他们自己的消
 
-他们自己的消息循环（也叫做事件循环）控制整个应用程序。程序员可能不能写应用程序级别的main函数。当然，main函数
+息循环（也叫做事件循环）来控制整个应用程序。程序员可能没有写应用程序级别的main函数的自由。通常来说，main函数
 
-被深埋在框架里边（如MFC中的AfxWinMain)，缺乏对main函数的控制使得程序员很难编写在应用程序主消息循环开始之前的
+被深埋在框架里边（如MFC中的AfxWinMain)，缺乏对main函数的控制使得程序员很难编写在程序主消息循环开始之前的初始
 
-初始化代码。初始化附着手法是在框架控制事件循环开始之前执行应用相关代码的方法。
+化代码。用静态对象的初始化附着手法是在事件循环开始之前执行应用相关初始化代码的方法。
 
 ##### 3.0.4 解决方案和示例代码
 
-在C++中，全局作用域中的全局和静态对象在main函数开始执行之前初始化。换句话说这些对象具有静态存储周期。
+在C++中，全局作用域中的全局和静态对象在main函数开始执行之前初始化。换句话说这些对象具有静态存储周期。具有静
+
+态生命周期对象初始化的特性，在程序员不能修改框架main函数的时候，可以用来附着对象到框架上。比如下边使用MFC的
+
+这个例子：
 
 ~~~
 

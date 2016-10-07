@@ -388,8 +388,40 @@ int main (void)
 这个例子：
 
 ~~~
+// file : hello.h
+class HelloApp : public CWinApp{
+public:
+    virtual BOOL InitInstance();
+}
 
+// file : hello.cpp
+
+#include <afxwin.h>
+#include "hello.h"
+HelloApp myApp;     // 全局的应用对象
+
+BOOL HelloApp::InitInstance(){
+
+    m_pMainWnd = new CFrameWnd();
+    m_pMainWnd->Create(0,"Hello, World!!");
+    m_pMainWnd->ShowWindow(SW_SHOW);
+    return TRUE;
+}
 ~~~
+
+上边的例子建立了一个标题是“Hello，World"的窗口，这里关键的地方是类型为HelloApp的全局对象myApp，myApp在main
+
+函数开始之前默认初始化。初始化这个对象的另外一个作用，也执行了CWinApp的构造函数。CWinApp类是MFC框架中的，
+
+调用框架中其他几个类的构造函数。在这些构造函数执行的过程中，全局对象附着到了框架。这个对象可以在AfxWinMain
+
+中使用，MFC中的AfxWinMain相当于通常的main函数。这里的HelloApp::InitInstance成员函数只是为了完整性，并不是这
+
+个技巧所必须的。
+
+全局和静态的对象可以以以下几种方式初始化：默认构造函数，带参数的构造函数，函数的返回值初始化，动态初始化等
+
+等。
 
 ##### 3.0.5 已知的用处
 

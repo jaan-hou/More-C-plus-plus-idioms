@@ -474,6 +474,44 @@ class Bar{
 
 它的代理只提供对Client::A 和 Client::B的访问。
 
+~~~
+class Client{
+
+private:
+    void A(int a);
+    void B(float b);
+    void c(double c);
+    friend class Attorney;
+};
+
+class Attorney{
+
+private:
+    static void callA(Client& c,int a){
+        c.A(a);
+    }
+    static void callB(Client& c,float b){
+        c.B(b);
+    }
+    friend class Bar;
+};
+
+class Bar{
+
+   /// Bar 类现在通过代理类只有对 Client::A 和 Client::B 的访问权限
+}；
+~~~
+
+代理类提供了对一组(private)成员函数子集的可访问性的限制，代理类有内联的静态成员函数，一个参数是
+
+Client的引用，转交调用Client内部的成员函数。代理类的实现是符合习惯的。所有的成员都是private的，
+
+阻止了其他类直接访问到Client的内部实现。代理类决定哪个类，那个成员函数或者自由函数可以访问Client
+
+内部。代理类把外部的类声明为友元，以便外部类能够访问到代理类内部的成员函数，最终访问Client。没有
+
+代理类，Client声明为友元的类将可以毫无约束地访问Client内部所有成员。
+
 ##### 4.0.5 已知的用处
 
 ---

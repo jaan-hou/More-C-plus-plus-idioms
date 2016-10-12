@@ -584,10 +584,35 @@ public:
 
 这个做法可以被泛化，把友元函数声明在基类中，通过怪异的循环模板模式继承。
 
+~~~
+template<typename T>
+class EqualityComparable{
+
+public:
+    friend bool operator==(const T& lft,const T& rgt){
+
+        return lft.equalTo(rgt);
+    }
+    friend bool operator!=(const T& lft,const T& rgt){
+
+        return !lft.equalTo(rgt);
+    }
+};
+
+class ValueType : private EqualityComparable<ValueType>{
+
+public:
+    bool equalTo(const ValueType & other) const;
+};
+~~~
+
 ##### 5.0.5 已知的用处
 
-##### 5.0.6 相关的做法
+* Boost中的运算符库
 
+##### 5.0.6 相关的技巧
+
+* Barton-Nackman技巧
 ---
 
 #### **8 在对象构造的时期调虚函数**

@@ -14,3 +14,14 @@
 
 ---
 
+本书翻译中所使用的markdown规范
+* 遇到段落才换行
+* 部分词汇对应的翻译为：
+
+|原文 | 译为|
+---- | ----
+Intent | 目的
+Also Known As | 别名
+Motivation | 作用 
+Solution and Sample Code | 解决方案和示例代码
+Known Uses | 已知的使用
